@@ -1,16 +1,15 @@
 package tw.kewang.logback.appender;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.json.JSONObject;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Layout;
-import ch.qos.logback.core.encoder.Encoder;
 
 public class HttpAppender extends HttpAppenderAbstract {
 
@@ -18,16 +17,12 @@ public class HttpAppender extends HttpAppenderAbstract {
 	 * Defines default method to send data.
 	 */
 	protected final static String DEFAULT_METHOD = "POST";
-
-	protected Encoder<ILoggingEvent> encoder;
-	protected Layout<ILoggingEvent> layout;
 	protected String method;
 
 	@Override
 	public void start() {
-		normalizeMethodName();
-		
 		super.start();
+		normalizeMethodName();
 	}
 	
 	protected void checkProperties() {
@@ -61,7 +56,10 @@ public class HttpAppender extends HttpAppenderAbstract {
 			conn.setRequestMethod(method);
 			transformHeaders(conn);
 			boolean isOk = false;
-			byte[] objEncoded = encoder.encode(event);
+			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			encoder.init(buffer);
+			encoder.doEncode(event);
+			byte[] objEncoded = buffer.toByteArray();
 			if (method.equals("GET") || method.equals("DELETE")) {
 				isOk = sendNoBodyRequest(conn);
 			} else if (method.equals("POST") || method.equals("PUT")) {
@@ -91,13 +89,14 @@ public class HttpAppender extends HttpAppenderAbstract {
 		method = method.toUpperCase();
 	}
 
-	protected void transformHeaders(HttpURLConnection conn) {
+	protected void transformHeaders(HttpURLConnection conn) throws IOException
+	{
 		conn.setRequestProperty("Content-Type", contentType);
 		if (headers == null || headers.isEmpty()) {
 			return;
 		}
 
-		JSONObject jObj = new JSONObject(headers);
+		Map<String, Object> jObj = jsonMapper.readValue(headers, json2Map);
 		for (String key : jObj.keySet()) {
 			String value = (String) jObj.get(key);
 			conn.setRequestProperty(key, value);
@@ -119,4 +118,14 @@ public class HttpAppender extends HttpAppenderAbstract {
 		}
 		return showResponse(conn);
 	}
+
+    public String getMethod()
+    {
+        return method;
+    }
+
+    public void setMethod(String method)
+    {
+        this.method = method;
+    }
 }

@@ -1,13 +1,17 @@
 package tw.kewang.logback.appender;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
-import org.json.JSONObject;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Layout;
@@ -15,6 +19,9 @@ import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.encoder.Encoder;
 
 public abstract class HttpAppenderAbstract extends UnsynchronizedAppenderBase<ILoggingEvent> {
+
+	protected static ObjectMapper jsonMapper = new ObjectMapper();
+	protected static TypeReference<HashMap<String,Object>> json2Map = new TypeReference<HashMap<String,Object>>() {};
 
 	/**
 	 * Defines default port to get access.
@@ -131,7 +138,10 @@ public abstract class HttpAppenderAbstract extends UnsynchronizedAppenderBase<IL
 	public void append(ILoggingEvent event) {
 		try {
 			HttpURLConnection conn = openConnection();
-			byte[] objEncoded = encoder.encode(event);
+			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+			encoder.init(buffer);
+			encoder.doEncode(event);
+			byte[] objEncoded = buffer.toByteArray();
 			transformHeaders(conn, objEncoded.length);
 			sendBodyRequest(objEncoded, conn);
 		} catch (IOException e) {
@@ -140,14 +150,15 @@ public abstract class HttpAppenderAbstract extends UnsynchronizedAppenderBase<IL
 		}
 	}
 
-	protected void transformHeaders(HttpURLConnection conn, int contentLength) {
+	protected void transformHeaders(HttpURLConnection conn, int contentLength) throws IOException
+	{
 		conn.setRequestProperty("Content-Type", contentType);
 		conn.setRequestProperty("Content-length", Integer.toString(contentLength));
 		if (headers == null || headers.isEmpty()) {
 			return;
 		}
 
-		JSONObject jObj = new JSONObject(headers);
+		Map<String, Object> jObj = jsonMapper.readValue(headers, json2Map);
 		for (String key : jObj.keySet()) {
 			String value = (String) jObj.get(key);
 			conn.setRequestProperty(key, value);
