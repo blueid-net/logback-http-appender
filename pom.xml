@@ -4,7 +4,7 @@
 
     <groupId>tw.kewang</groupId>
     <artifactId>logback-http-appender</artifactId>
-    <version>0.2.6-BLUEID</version>
+    <version>0.2.7-BLUEID</version>
     <packaging>jar</packaging>
 
     <name>logback-http-appender</name>
