@@ -64,6 +64,13 @@
     </dependencies>
     
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.zalando.org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE-zal-2</version>
+            </extension>
+        </extensions>
         <resources>
             <resource>
                 <directory>${project.basedir}</directory>
